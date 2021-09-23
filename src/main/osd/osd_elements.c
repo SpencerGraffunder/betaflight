@@ -1100,6 +1100,24 @@ static void osdElementEfficiency(osdElementParms_t *element)
 }
 #endif // USE_GPS
 
+#ifdef USE_GPS_LAP_TIMER
+static void osdElementGpsLapTime(osdElementParms_t *element)
+{
+    uint16_t lapTimeSeconds;
+    uint16_t lapTimeDecimals;
+    if (gpsLapTimerData.currentLapTime < (gpsLapTimerConfig()->minimumLapTimeSeconds * 1000) && gpsLapTimerData.lastLapTime != 0.0) {
+        // within minimum lap time, and not first lap, so show last lap
+        lapTimeSeconds = gpsLapTimerData.lastLapTime / 1000;
+        lapTimeDecimals = (gpsLapTimerData.lastLapTime % 1000) / 10;
+    } else {
+        // outside minimum lap time so show current lap
+        lapTimeSeconds = gpsLapTimerData.currentLapTime / 1000;
+        lapTimeDecimals = (gpsLapTimerData.currentLapTime % 1000) / 10;
+    }
+    tfp_sprintf(element->buff, "%02d.%02d", lapTimeSeconds, lapTimeDecimals);
+}
+#endif // GPS_LAP_TIMER
+
 static void osdBackgroundHorizonSidebars(osdElementParms_t *element)
 {
     // Draw AH sides
