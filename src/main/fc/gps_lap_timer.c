@@ -51,28 +51,28 @@ static int64_t gateSetLatReadings = 0;
 static int64_t gateSetLonReadings = 0;
 static bool settingGate = false;
 static gpsLocation_t lastLocation;
-static uint16_t timeOfLastLap;
-static bool timerRunning;
-static uint16_t previousLaps[2];
+static uint32_t lastLocationTime;
+static uint32_t timeOfLastLap = 0L;
+static bool timerRunning = false;
 
 gpsLapTimerData_t gpsLapTimerData;
 
 void gpsLapTimerInit(void)
 {
-    timeOfLastLap = 0L;
-    gpsLapTimerData.currentLapTime = 0L;
-    gpsLapTimerData.lastLapTime = 0L;
     gpsLapTimerData.gateLocationLeft.lat = gpsLapTimerConfig()->gateLeftLat;
     gpsLapTimerData.gateLocationLeft.lon = gpsLapTimerConfig()->gateLeftLon;
     gpsLapTimerData.gateLocationRight.lat = gpsLapTimerConfig()->gateRightLat;
     gpsLapTimerData.gateLocationRight.lon  = gpsLapTimerConfig()->gateRightLon;
-    gpsLapTimerData.bestLapTime = INTTYPE_MAX(uint16_t);
-    gpsLapTimerData.best3Consec = INTTYPE_MAX(uint16_t);
-    gateSetLatReadings = 0;
-    gateSetLonReadings = 0;
+    gpsLapTimerData.currentLapTime = 0;
     gpsLapTimerData.numberOfSetReadings = 0;
-    settingGate = false;
+    gpsLapTimerData.bestLapTime = 0;
+    gpsLapTimerData.best3Consec = 0;
+    gpsLapTimerData.distToPoint = 0;
+    gpsLapTimerData.previousLaps[0] = 0;
+    gpsLapTimerData.previousLaps[1] = 0;
+    gpsLapTimerData.previousLaps[2] = 0;
     timerRunning = false;
+    settingGate = false;
 }
 
 void gpsLapTimerStartSetGate(void)
@@ -90,14 +90,18 @@ void gpsLapTimerProcessSettingGate(void)
         gateSetLonReadings += gpsSol.llh.lon;
         gpsLapTimerData.numberOfSetReadings++;
     }
+    int32_t newLat = gateSetLatReadings / gpsLapTimerData.numberOfSetReadings;
+    int32_t newLon = gateSetLonReadings / gpsLapTimerData.numberOfSetReadings;
+    int32_t bearing;
+    GPS_distance_cm_bearing(&gpsSol.llh.lat, &gpsSol.llh.lon, &newLat, &newLon, &gpsLapTimerData.distToPoint, &bearing);
 }
 
 void gpsLapTimerEndSetGate(gpsLapTimerGateSide_e side)
 {
     settingGate = false;
 
-    uint32_t newLat = gateSetLatReadings / gpsLapTimerData.numberOfSetReadings;
-    uint32_t newLon = gateSetLonReadings / gpsLapTimerData.numberOfSetReadings;
+    int32_t newLat = gateSetLatReadings / gpsLapTimerData.numberOfSetReadings;
+    int32_t newLon = gateSetLonReadings / gpsLapTimerData.numberOfSetReadings;
 
     if (side == GATE_SIDE_LEFT) {
         gpsLapTimerData.gateLocationLeft.lat = newLat;
@@ -181,36 +185,78 @@ bool doSegmentsIntersect(gpsLocation_t gateLeft, gpsLocation_t gateRight, gpsLoc
     return false; // Doesn't fall in any of the above cases
 }
 
+void lineLineIntersectionTime(gpsLocation_t *a, gpsLocation_t *b, gpsLocation_t *c, gpsLocation_t *d, uint32_t *t1, uint32_t *t2, uint32_t *intersection_time)
+{ 
+    // Line AB represented as a1x + b1y = c1
+    int64_t a1 = b->lon - a->lon;
+    int64_t b1 = a->lat - b->lat;
+    int64_t c1 = a1 * a->lat + b1 * a->lon;
+  
+    // Line CD represented as a2x + b2y = c2
+    int64_t a2 = d->lon - c->lon;
+    int64_t b2 = c->lat - d->lat;
+    int64_t c2 = a2 * c->lat + b2 * c->lon;
+  
+    int64_t determinant = a1 * b2 - a2 * b1;
+  
+    gpsLocation_t intersection;
+    if (determinant == 0) {
+        // The lines are parallel.
+    } else {
+        intersection.lat = (b2 * c1 - b1 * c2) / determinant;
+        intersection.lon = (a1 * c2 - a2 * c1) / determinant;
+    }
+
+    int32_t dummy;
+    uint32_t distCI;
+    GPS_distance_cm_bearing(&c->lat, &c->lon, &intersection.lat, &intersection.lon, &distCI, &dummy);
+    uint32_t distCD;
+    GPS_distance_cm_bearing(&c->lat, &c->lon, &d->lat, &d->lon, &distCD, &dummy);
+    *intersection_time = *t1 + (*t2 - *t1) * distCI / distCD;
+    //cliPrintf("t1: %u, t2: %u, Intersect %u", *t1, *t2, *intersection_time);
+}
+
 void gpsLapTimerUpdate(void)
 {
-    uint16_t currentTime = millis();
+    uint32_t currentTime = millis();
 
     if (timerRunning) {
         gpsLapTimerData.currentLapTime = currentTime - timeOfLastLap;
     } else {
-        gpsLapTimerData.currentLapTime = 0.0;
+        gpsLapTimerData.currentLapTime = 0;
     }
 
-    bool crossedTimingGate = doSegmentsIntersect(gpsLapTimerData.gateLocationLeft, gpsLapTimerData.gateLocationRight,
-                                                 lastLocation, gpsSol.llh);
-
-    if (crossedTimingGate) {
-        if (gpsLapTimerData.currentLapTime > (gpsLapTimerConfig()->minimumLapTimeSeconds * 1000) || !timerRunning) {
-            previousLaps[1] = previousLaps[0];
-            previousLaps[0] = gpsLapTimerData.lastLapTime;
-            gpsLapTimerData.lastLapTime = gpsLapTimerData.currentLapTime;
-            timeOfLastLap = currentTime;
-            if (timeOfLastLap < gpsLapTimerData.bestLapTime) {
-                gpsLapTimerData.bestLapTime = timeOfLastLap;
+    // Current lap time is at least the min lap timer or timer not running
+    if (gpsLapTimerData.currentLapTime > (gpsLapTimerConfig()->minimumLapTimeSeconds * 1000) || !timerRunning) {
+        if (doSegmentsIntersect(gpsLapTimerData.gateLocationLeft, gpsLapTimerData.gateLocationRight, lastLocation, gpsSol.llh)) {
+            uint32_t preciceTimeOfCrossing;
+            uint32_t preciceLapTime = 0;
+            //lineLineIntersectionTime(&gpsLapTimerData.gateLocationLeft, &gpsLapTimerData.gateLocationRight, &lastLocation, &gpsSol.llh, 
+            //                        &lastLocationTime, &currentTime, &preciceTimeOfCrossing);
+            preciceTimeOfCrossing = currentTime;
+            if (timerRunning) {
+                preciceLapTime = preciceTimeOfCrossing - timeOfLastLap;
             }
-            if (previousLaps[0] + previousLaps[1] + gpsLapTimerData.lastLapTime < gpsLapTimerData.best3Consec) {
-                gpsLapTimerData.best3Consec = previousLaps[0] + previousLaps[1] + gpsLapTimerData.lastLapTime;
+            timeOfLastLap = preciceTimeOfCrossing;
+            // Update best 3 consecutive
+            gpsLapTimerData.previousLaps[2] = gpsLapTimerData.previousLaps[1];
+            gpsLapTimerData.previousLaps[1] = gpsLapTimerData.previousLaps[0];
+            gpsLapTimerData.previousLaps[0] = preciceLapTime;
+            if (gpsLapTimerData.previousLaps[2] != 0 && gpsLapTimerData.previousLaps[1] != 0 && gpsLapTimerData.previousLaps[0] != 0 &&
+                (gpsLapTimerData.previousLaps[2] + gpsLapTimerData.previousLaps[1] + gpsLapTimerData.previousLaps[0] < gpsLapTimerData.best3Consec || gpsLapTimerData.best3Consec == 0)) {
+                gpsLapTimerData.best3Consec = gpsLapTimerData.previousLaps[0] + gpsLapTimerData.previousLaps[1] + gpsLapTimerData.previousLaps[2];
             }
+            // Update best lap time
+            if (gpsLapTimerData.previousLaps[0] != 0 &&
+                (gpsLapTimerData.previousLaps[0] < gpsLapTimerData.bestLapTime || gpsLapTimerData.bestLapTime == 0)) {
+                gpsLapTimerData.bestLapTime = gpsLapTimerData.previousLaps[0];
+            }
+            timerRunning = true;
         }
-        timerRunning = true;
     }
 
     lastLocation = gpsSol.llh;
+    lastLocationTime = currentTime;
 
     if (settingGate) {
         gpsLapTimerProcessSettingGate();

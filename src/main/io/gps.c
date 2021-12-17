@@ -163,15 +163,8 @@ enum {
 #define UBLOX_USAGE_DIFFCORR  0x2
 #define UBLOX_USAGE_INTEGRITY 0x4
 
-#define USE_GPS_18HZ
-#ifdef USE_GPS_18HZ
-    0xB5, 0x62, 0x06, 0x08, 0x06, 0x00, 0x35, 0x00, 0x01, 0x00, 0x01, 0x00, 0x4B, 0xF8,             // set rate to 18.87Hz (measurement period: 53ms, navigation rate: 1 cycle)
-#elif USE_GPS_10HZ
-    0xB5, 0x62, 0x06, 0x08, 0x06, 0x00, 0x64, 0x00, 0x01, 0x00, 0x01, 0x00, 0x7A, 0x12,             // set rate to 10Hz (measurement period: 100ms, navigation rate: 1 cycle)
-#else
-    0xB5, 0x62, 0x06, 0x08, 0x06, 0x00, 0xC8, 0x00, 0x01, 0x00, 0x01, 0x00, 0xDE, 0x6A,             // set rate to 5Hz (measurement period: 200ms, navigation rate: 1 cycle)
-#endif
-};
+#define UBLOX_GNSS_ENABLE     0x1
+#define UBLOX_GNSS_DEFAULT_SIGCFGMASK 0x10000
 
 #define UBLOX_DYNMODE_PEDESTRIAN  3
 #define UBLOX_DYNMODE_AIRBORNE_1G 6
@@ -688,7 +681,14 @@ void gpsInitUblox(void)
                         }
                         break;
                     case 12:
+#define USE_GPS_18HZ
+#ifdef USE_GPS_18HZ
+                        ubloxSetNavRate(0x35, 1, 1); // set rate to 18.87Hz (measurement period: 53ms, navigation rate: 1 cycle)
+#elif USE_GPS_10HZ
+                        ubloxSetNavRate(0x64, 1, 1); // set rate to 10Hz (measurement period: 100ms, navigation rate: 1 cycle)
+#else
                         ubloxSetNavRate(0xC8, 1, 1); // set rate to 5Hz (measurement period: 200ms, navigation rate: 1 cycle)
+#endif
                         break;
                     case 13:
                         ubloxSetSbas();

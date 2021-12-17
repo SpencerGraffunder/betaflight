@@ -29,11 +29,12 @@ typedef enum {
 typedef struct gpsLapTimerData_s {
     gpsLocation_t gateLocationLeft;
     gpsLocation_t gateLocationRight;
-    uint16_t lastLapTime;
-    uint16_t currentLapTime;
-    uint16_t  numberOfSetReadings;
-    uint16_t bestLapTime;
-    uint16_t best3Consec;
+    uint32_t previousLaps[3];
+    uint32_t currentLapTime;
+    uint16_t numberOfSetReadings;
+    uint32_t bestLapTime;
+    uint32_t best3Consec;
+    uint32_t distToPoint;
 } gpsLapTimerData_t;
 
 typedef struct gpsLapTimerConfig_s {

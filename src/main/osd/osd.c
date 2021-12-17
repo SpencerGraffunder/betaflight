@@ -850,21 +850,32 @@ static bool osdDisplayStat(int statistic, uint8_t displayRow)
 
 #ifdef USE_GPS_LAP_TIMER
     case OSD_STAT_BEST_3_CONSEC_LAPS: {
-        uint16_t lapTimeSeconds;
-        uint16_t lapTimeDecimals;
-        lapTimeSeconds = gpsLapTimerData.best3Consec / 1000;
-        lapTimeDecimals = (gpsLapTimerData.best3Consec % 1000) / 10;
-        tfp_sprintf(buff, "%02d.%02d", lapTimeSeconds, lapTimeDecimals);
+        uint32_t lapTimeSeconds;
+        uint32_t lapTimeDecimals;
+        if (gpsLapTimerData.best3Consec != 0) {
+            lapTimeSeconds = gpsLapTimerData.best3Consec / 1000;
+            lapTimeDecimals = (gpsLapTimerData.best3Consec % 1000) / 10;
+            tfp_sprintf(buff, "%3u.%02u", lapTimeSeconds, lapTimeDecimals);
+        } else {
+            tfp_sprintf(buff, "  -.--");
+        }
+        
         osdDisplayStatisticLabel(displayRow, "BEST 3 CON", buff);
         return true;
     }
 
     case OSD_STAT_BEST_LAP: {
-        uint16_t lapTimeSeconds;
-        uint16_t lapTimeDecimals;
+        uint32_t lapTimeSeconds;
+        uint32_t lapTimeDecimals;
         lapTimeSeconds = gpsLapTimerData.bestLapTime / 1000;
         lapTimeDecimals = (gpsLapTimerData.bestLapTime % 1000) / 10;
-        tfp_sprintf(buff, "%02d.%02d", lapTimeSeconds, lapTimeDecimals);
+        if (gpsLapTimerData.bestLapTime != 0) {
+            lapTimeSeconds = gpsLapTimerData.bestLapTime / 1000;
+            lapTimeDecimals = (gpsLapTimerData.bestLapTime % 1000) / 10;
+            tfp_sprintf(buff, "%3u.%02u", lapTimeSeconds, lapTimeDecimals);
+        } else {
+            tfp_sprintf(buff, "  -.--");
+        }
         osdDisplayStatisticLabel(displayRow, "BEST LAP", buff);
         return true;
     }

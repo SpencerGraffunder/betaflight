@@ -1101,20 +1101,25 @@ static void osdElementEfficiency(osdElementParms_t *element)
 #endif // USE_GPS
 
 #ifdef USE_GPS_LAP_TIMER
-static void osdElementGpsLapTime(osdElementParms_t *element)
+static void osdElementGpsLapTimeCurrent(osdElementParms_t *element)
 {
-    uint16_t lapTimeSeconds;
-    uint16_t lapTimeDecimals;
-    if (gpsLapTimerData.currentLapTime < (gpsLapTimerConfig()->minimumLapTimeSeconds * 1000) && gpsLapTimerData.lastLapTime != 0.0) {
-        // within minimum lap time, and not first lap, so show last lap
-        lapTimeSeconds = gpsLapTimerData.lastLapTime / 1000;
-        lapTimeDecimals = (gpsLapTimerData.lastLapTime % 1000) / 10;
-    } else {
-        // outside minimum lap time so show current lap
-        lapTimeSeconds = gpsLapTimerData.currentLapTime / 1000;
-        lapTimeDecimals = (gpsLapTimerData.currentLapTime % 1000) / 10;
-    }
-    tfp_sprintf(element->buff, "%02d.%02d", lapTimeSeconds, lapTimeDecimals);
+    uint32_t lapTimeSeconds = gpsLapTimerData.currentLapTime / 1000;
+    uint32_t lapTimeDecimals = (gpsLapTimerData.currentLapTime % 1000) / 10;
+    tfp_sprintf(element->buff, "%3u.%02u", lapTimeSeconds, lapTimeDecimals);
+}
+
+static void osdElementGpsLapTimePrevious(osdElementParms_t *element)
+{
+    uint32_t lapTimeSeconds = gpsLapTimerData.previousLaps[0] / 1000;
+    uint32_t lapTimeDecimals = (gpsLapTimerData.previousLaps[0] % 1000) / 10;
+    tfp_sprintf(element->buff, "%3u.%02u", lapTimeSeconds, lapTimeDecimals);
+}
+
+static void osdElementGpsLapTimeBest3(osdElementParms_t *element)
+{
+    uint32_t lapTimeSeconds = gpsLapTimerData.best3Consec / 1000;
+    uint32_t lapTimeDecimals = (gpsLapTimerData.best3Consec % 1000) / 10;
+    tfp_sprintf(element->buff, "%3u.%02u", lapTimeSeconds, lapTimeDecimals);
 }
 #endif // GPS_LAP_TIMER
 
@@ -1693,6 +1698,11 @@ const osdElementDrawFn osdElementDrawFunction[OSD_ITEM_COUNT] = {
 #ifdef USE_PERSISTENT_STATS
     [OSD_TOTAL_FLIGHTS]           = osdElementTotalFlights,
 #endif
+#ifdef USE_GPS_LAP_TIMER
+    [OSD_GPS_LAP_TIME_CURRENT]    = osdElementGpsLapTimeCurrent,
+    [OSD_GPS_LAP_TIME_PREVIOUS]   = osdElementGpsLapTimePrevious,
+    [OSD_GPS_LAP_TIME_BEST3]      = osdElementGpsLapTimeBest3,
+#endif // GPS_LAP_TIMER
 };
 
 // Define the mapping between the OSD element id and the function to draw its background (static part)
@@ -1763,6 +1773,13 @@ void osdAddActiveElements(void)
 #ifdef USE_PERSISTENT_STATS
     osdAddActiveElement(OSD_TOTAL_FLIGHTS);
 #endif
+#ifdef USE_GPS_LAP_TIMER
+    if (sensors(SENSOR_GPS)) {
+        osdAddActiveElement(OSD_GPS_LAP_TIME_CURRENT);
+        osdAddActiveElement(OSD_GPS_LAP_TIME_PREVIOUS);
+        osdAddActiveElement(OSD_GPS_LAP_TIME_BEST3);
+    }
+#endif // GPS_LAP_TIMER
 }
 
 static void osdDrawSingleElement(displayPort_t *osdDisplayPort, uint8_t item)
