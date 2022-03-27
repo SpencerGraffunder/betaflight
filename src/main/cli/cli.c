@@ -4672,7 +4672,16 @@ STATIC_UNIT_TESTED void cliSet(const char *cmdName, char *cmdline)
                             uint32_t *data = (uint32_t *)cliGetValuePointer(val) + i;
                             // store value
                             *data = (uint32_t)strtoul((const char*) valPtr, NULL, 10);
-                       }
+                        }
+
+                        break;
+                    case VAR_INT32:
+                        {
+                            // fetch data pointer
+                            int32_t *data = (int32_t *)cliGetValuePointer(val) + i;
+                            // store value
+                            *data = (int32_t)strtol((const char*) valPtr, NULL, 10);
+                        }
 
                         break;
                     }

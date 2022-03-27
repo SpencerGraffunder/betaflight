@@ -170,8 +170,8 @@ const OSD_Entry menuOsdActiveElemsEntries[] =
     {"LAP TIME PREVIOUS",  OME_VISIBLE | DYNAMIC, NULL, &osdConfig_item_pos[OSD_GPS_LAP_TIME_PREVIOUS]},
     {"LAP TIME BEST 3",    OME_VISIBLE | DYNAMIC, NULL, &osdConfig_item_pos[OSD_GPS_LAP_TIME_BEST3]},
 #endif // GPS_LAP_TIMER
-    {"BACK",               OME_Back,    NULL, NULL, 0},
-    {NULL,                 OME_END,     NULL, NULL, 0}
+    {"BACK",               OME_Back,    NULL, NULL},
+    {NULL,                 OME_END,     NULL, NULL}
 };
 
 static CMS_Menu menuOsdActiveElems = {

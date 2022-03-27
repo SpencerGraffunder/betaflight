@@ -21,14 +21,8 @@
 
 #include "pg/pg.h"
 
-typedef enum {
-    GATE_SIDE_LEFT  = 0,
-    GATE_SIDE_RIGHT = 1,
-} gpsLapTimerGateSide_e;
-
 typedef struct gpsLapTimerData_s {
-    gpsLocation_t gateLocationLeft;
-    gpsLocation_t gateLocationRight;
+    gpsLocation_t gateLocation;
     uint32_t previousLaps[3];
     uint32_t currentLapTime;
     uint16_t numberOfSetReadings;
@@ -38,11 +32,10 @@ typedef struct gpsLapTimerData_s {
 } gpsLapTimerData_t;
 
 typedef struct gpsLapTimerConfig_s {
-    int32_t gateLeftLat;
-    int32_t gateLeftLon;
-    int32_t gateRightLat;
-    int32_t gateRightLon;
+    int32_t gateLat;
+    int32_t gateLon;
     uint16_t minimumLapTimeSeconds;
+    uint32_t gateToleranceCm;
 } gpsLapTimerConfig_t;
 
 PG_DECLARE(gpsLapTimerConfig_t, gpsLapTimerConfig);
@@ -52,4 +45,4 @@ extern gpsLapTimerData_t gpsLapTimerData;
 void gpsLapTimerInit(void);
 void gpsLapTimerUpdate(void);
 void gpsLapTimerStartSetGate(void);
-void gpsLapTimerEndSetGate(gpsLapTimerGateSide_e);
+void gpsLapTimerEndSetGate(void);

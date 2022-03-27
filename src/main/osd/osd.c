@@ -189,8 +189,10 @@ const osd_stats_e osdStatsDisplayOrder[OSD_STAT_COUNT] = {
     OSD_STAT_TOTAL_FLIGHTS,
     OSD_STAT_TOTAL_TIME,
     OSD_STAT_TOTAL_DIST,
+#ifdef USE_GPS_LAP_TIMER
     OSD_STAT_BEST_3_CONSEC_LAPS,
     OSD_STAT_BEST_LAP,
+#endif // GPS_LAP_TIMER
 };
 
 // Group elements in a number of groups to reduce task scheduling overhead
@@ -879,7 +881,7 @@ static bool osdDisplayStat(int statistic, uint8_t displayRow)
         osdDisplayStatisticLabel(displayRow, "BEST LAP", buff);
         return true;
     }
-#endif
+#endif // GPS_LAP_TIMER
 
 #ifdef USE_PERSISTENT_STATS
     case OSD_STAT_TOTAL_FLIGHTS:

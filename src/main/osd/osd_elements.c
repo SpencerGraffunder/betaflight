@@ -134,6 +134,7 @@
 
 #include "fc/controlrate_profile.h"
 #include "fc/core.h"
+#include "fc/gps_lap_timer.h"
 #include "fc/rc_adjustments.h"
 #include "fc/rc_controls.h"
 #include "fc/runtime_config.h"

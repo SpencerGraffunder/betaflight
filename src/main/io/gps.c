@@ -49,6 +49,7 @@
 #include "io/serial.h"
 
 #include "config/config.h"
+#include "fc/gps_lap_timer.h"
 #include "fc/runtime_config.h"
 
 #include "flight/imu.h"
@@ -681,14 +682,7 @@ void gpsInitUblox(void)
                         }
                         break;
                     case 12:
-#define USE_GPS_18HZ
-#ifdef USE_GPS_18HZ
-                        ubloxSetNavRate(0x35, 1, 1); // set rate to 18.87Hz (measurement period: 53ms, navigation rate: 1 cycle)
-#elif USE_GPS_10HZ
-                        ubloxSetNavRate(0x64, 1, 1); // set rate to 10Hz (measurement period: 100ms, navigation rate: 1 cycle)
-#else
-                        ubloxSetNavRate(0xC8, 1, 1); // set rate to 5Hz (measurement period: 200ms, navigation rate: 1 cycle)
-#endif
+                        ubloxSetNavRate(gpsConfig()->gpsUpdateRate, 1, 1); // set rate according to gps config
                         break;
                     case 13:
                         ubloxSetSbas();
@@ -1877,6 +1871,9 @@ void onGpsNewData(void)
 #ifdef USE_GPS_RESCUE
     rescueNewGpsData();
 #endif
+#ifdef USE_GPS_LAP_TIMER
+    gpsLapTimerUpdate();
+#endif // GPS_LAP_TIMER
 }
 
 void gpsSetFixState(bool state)

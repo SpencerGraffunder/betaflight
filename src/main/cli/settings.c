@@ -50,6 +50,7 @@
 #include "config/config.h"
 #include "fc/controlrate_profile.h"
 #include "fc/core.h"
+#include "fc/gps_lap_timer.h"
 #include "fc/parameter_names.h"
 #include "fc/rc.h"
 #include "fc/rc_adjustments.h"
@@ -202,6 +203,10 @@ static const char * const lookupTableGPSProvider[] = {
 
 static const char * const lookupTableGPSSBASMode[] = {
     "AUTO", "EGNOS", "WAAS", "MSAS", "GAGAN", "NONE"
+};
+
+static const char * const lookupTableGPSUpdateRate[] = {
+    "19HZ", "10HZ", "5HZ"
 };
 
 static const char * const lookupTableGPSUBLOXMode[] = {
@@ -538,6 +543,7 @@ const lookupTableEntry_t lookupTables[] = {
     LOOKUP_TABLE_ENTRY(lookupTableGPSProvider),
     LOOKUP_TABLE_ENTRY(lookupTableGPSSBASMode),
     LOOKUP_TABLE_ENTRY(lookupTableGPSUBLOXMode),
+    LOOKUP_TABLE_ENTRY(lookupTableGPSUpdateRate),
 #ifdef USE_GPS_RESCUE
     LOOKUP_TABLE_ENTRY(lookupTableRescueSanityType),
     LOOKUP_TABLE_ENTRY(lookupTableRescueAltitudeMode),
@@ -1016,6 +1022,7 @@ const clivalue_t valueTable[] = {
     { "gps_ublox_mode",             VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_GPS_UBLOX_MODE }, PG_GPS_CONFIG, offsetof(gpsConfig_t, gps_ublox_mode) },
     { "gps_set_home_point_once",    VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_GPS_CONFIG, offsetof(gpsConfig_t, gps_set_home_point_once) },
     { "gps_use_3d_speed",           VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_GPS_CONFIG, offsetof(gpsConfig_t, gps_use_3d_speed) },
+    { "gps_update_rate",            VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_GPS_UPDATE_RATE }, PG_GPS_CONFIG, offsetof(gpsConfig_t, gpsUpdateRate) },
 
 #ifdef USE_GPS_RESCUE
     // PG_GPS_RESCUE
@@ -1047,6 +1054,12 @@ const clivalue_t valueTable[] = {
 #ifdef USE_MAG
     { "gps_rescue_use_mag",         VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_GPS_RESCUE, offsetof(gpsRescueConfig_t, useMag) },
 #endif
+#endif
+#ifdef USE_GPS_LAP_TIMER
+    { "gps_lap_timer_gate_lat",       VAR_INT32  | MASTER_VALUE, .config.minmax = { -1800000000, 1800000000 }, PG_GPS_LAP_TIMER, offsetof(gpsLapTimerConfig_t, gateLat) },
+    { "gps_lap_timer_gate_lon",       VAR_INT32  | MASTER_VALUE, .config.minmax = { -1800000000, 1800000000 }, PG_GPS_LAP_TIMER, offsetof(gpsLapTimerConfig_t, gateLon) },
+    { "gps_lap_timer_min_lap_time",   VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 0, 3000 },         PG_GPS_LAP_TIMER, offsetof(gpsLapTimerConfig_t, minimumLapTimeSeconds) },
+    { "gps_lap_timer_gate_tolerance", VAR_UINT32 | MASTER_VALUE, .config.minmaxUnsigned = { 0, 3000 },         PG_GPS_LAP_TIMER, offsetof(gpsLapTimerConfig_t, gateToleranceCm) },
 #endif
 #endif
 
@@ -1392,9 +1405,9 @@ const clivalue_t valueTable[] = {
     { "osd_gps_lon_pos",            VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, OSD_POSCFG_MAX }, PG_OSD_ELEMENT_CONFIG, offsetof(osdElementConfig_t, item_pos[OSD_GPS_LON]) },
     { "osd_gps_lat_pos",            VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, OSD_POSCFG_MAX }, PG_OSD_ELEMENT_CONFIG, offsetof(osdElementConfig_t, item_pos[OSD_GPS_LAT]) },
 #ifdef USE_GPS_LAP_TIMER
-    { "osd_gps_lap_time_current_pos",   VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, OSD_POSCFG_MAX }, PG_OSD_ELEMENT_CONFIG, offsetof(osdElementConfig_t, item_pos[OSD_GPS_LAP_TIME_CURRENT]) },
-    { "osd_gps_lap_time_previous_pos",  VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, OSD_POSCFG_MAX }, PG_OSD_ELEMENT_CONFIG, offsetof(osdElementConfig_t, item_pos[OSD_GPS_LAP_TIME_PREVIOUS]) },
-    { "osd_gps_lap_time_best_3_pos",    VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, OSD_POSCFG_MAX }, PG_OSD_ELEMENT_CONFIG, offsetof(osdElementConfig_t, item_pos[OSD_GPS_LAP_TIME_BEST3]) },
+    { "osd_lap_time_current_pos",   VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, OSD_POSCFG_MAX }, PG_OSD_ELEMENT_CONFIG, offsetof(osdElementConfig_t, item_pos[OSD_GPS_LAP_TIME_CURRENT]) },
+    { "osd_lap_time_previous_pos",  VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, OSD_POSCFG_MAX }, PG_OSD_ELEMENT_CONFIG, offsetof(osdElementConfig_t, item_pos[OSD_GPS_LAP_TIME_PREVIOUS]) },
+    { "osd_lap_time_best_3_pos",    VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, OSD_POSCFG_MAX }, PG_OSD_ELEMENT_CONFIG, offsetof(osdElementConfig_t, item_pos[OSD_GPS_LAP_TIME_BEST3]) },
 #endif // GPS_LAP_TIMER
     { "osd_gps_sats_pos",           VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, OSD_POSCFG_MAX }, PG_OSD_ELEMENT_CONFIG, offsetof(osdElementConfig_t, item_pos[OSD_GPS_SATS]) },
     { "osd_home_dir_pos",           VAR_UINT16  | MASTER_VALUE, .config.minmaxUnsigned = { 0, OSD_POSCFG_MAX }, PG_OSD_ELEMENT_CONFIG, offsetof(osdElementConfig_t, item_pos[OSD_HOME_DIR]) },
@@ -1488,7 +1501,7 @@ const clivalue_t valueTable[] = {
 #ifdef USE_GPS_LAP_TIMER
     { "osd_stat_best_3_consec_laps",VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = OSD_STAT_BEST_3_CONSEC_LAPS,  PG_OSD_CONFIG, offsetof(osdConfig_t, enabled_stats)},
     { "osd_stat_best_lap",          VAR_UINT32  | MASTER_VALUE | MODE_BITSET, .config.bitpos = OSD_STAT_BEST_LAP,            PG_OSD_CONFIG, offsetof(osdConfig_t, enabled_stats)},
-#endif
+#endif // GPS_LAP_TIMER
 
 #ifdef USE_OSD_PROFILES
     { "osd_profile",                VAR_UINT8  | MASTER_VALUE, .config.minmaxUnsigned = { 1, OSD_PROFILE_COUNT }, PG_OSD_CONFIG, offsetof(osdConfig_t, osdProfileIndex) },

@@ -33,6 +33,7 @@ typedef enum {
     TABLE_GPS_PROVIDER,
     TABLE_GPS_SBAS_MODE,
     TABLE_GPS_UBLOX_MODE,
+    TABLE_GPS_UPDATE_RATE,
 #endif
 #ifdef USE_GPS_RESCUE
     TABLE_GPS_RESCUE_SANITY_CHECK,
@@ -165,6 +166,7 @@ typedef enum {
     VAR_UINT16 = (2 << VALUE_TYPE_OFFSET),
     VAR_INT16 = (3 << VALUE_TYPE_OFFSET),
     VAR_UINT32 = (4 << VALUE_TYPE_OFFSET),
+    VAR_INT32 = (5 << VALUE_TYPE_OFFSET),
 
     // value section, bits 3-4
     MASTER_VALUE = (0 << VALUE_SECTION_OFFSET),
@@ -186,8 +188,8 @@ typedef enum {
 #define VALUE_MODE_MASK (0xE0)
 
 typedef struct cliMinMaxConfig_s {
-    const int16_t min;
-    const int16_t max;
+    const int32_t min;
+    const int32_t max;
 } cliMinMaxConfig_t;
 
 typedef struct cliMinMaxUnsignedConfig_s {
