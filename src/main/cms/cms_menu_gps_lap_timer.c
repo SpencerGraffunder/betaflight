@@ -40,14 +40,14 @@
 #include "fc/gps_lap_timer.h"
 
 static uint16_t gpsLapTimerConfig_minimumLapTimeSeconds;
-static uint32_t gpsLapTimerConfig_gateToleranceCm;
+static uint8_t gpsLapTimerConfig_gateTolerance;
 
 static const void *cms_menuGpsLapTimerOnEnter(displayPort_t *pDisp)
 {
     UNUSED(pDisp);
 
     gpsLapTimerConfig_minimumLapTimeSeconds = gpsLapTimerConfig()->minimumLapTimeSeconds;
-    gpsLapTimerConfig_gateToleranceCm = gpsLapTimerConfig()->gateToleranceCm;
+    gpsLapTimerConfig_gateTolerance = gpsLapTimerConfig()->gateTolerance;
 
     return NULL;
 }
@@ -58,7 +58,7 @@ static const void *cms_menuGpsLapTimerOnExit(displayPort_t *pDisp, const OSD_Ent
     UNUSED(self);
 
     gpsLapTimerConfigMutable()->minimumLapTimeSeconds = gpsLapTimerConfig_minimumLapTimeSeconds;
-    gpsLapTimerConfigMutable()->gateToleranceCm = gpsLapTimerConfig_gateToleranceCm;
+    gpsLapTimerConfigMutable()->gateTolerance = gpsLapTimerConfig_gateTolerance;
 
     return NULL;
 }
@@ -110,9 +110,9 @@ const OSD_Entry cms_menuGpsLapTimerEntries[] =
 {
     {"--- GPS LAP TIMER ---", OME_Label,   NULL,          NULL},
 
-    {"MIN LAP",               OME_UINT16,  NULL,          &(OSD_UINT16_t){&gpsLapTimerConfig_minimumLapTimeSeconds,   0, 3000, 1}},
-    {"GATE TOLERANCE",        OME_UINT32,  NULL,          &(OSD_UINT32_t){&gpsLapTimerConfig_gateToleranceCm, 0, 3000, 1}},
     {"SET POSITION",          OME_Funcall, cmsMenuChange, &cmsSetGateMenu},
+    {"GATE TOLERANCE",        OME_UINT8,   NULL,          &(OSD_UINT8_t){&gpsLapTimerConfig_gateTolerance, 1, 100, 1}},
+    {"MIN LAP",               OME_UINT16,  NULL,          &(OSD_UINT16_t){&gpsLapTimerConfig_minimumLapTimeSeconds,   0, 3000, 1}},
 
     {"BACK",                  OME_Back,    NULL,          NULL},
     {NULL,                    OME_END,     NULL,          NULL}};

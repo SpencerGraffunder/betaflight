@@ -83,9 +83,9 @@ typedef enum {
 } ubloxAckState_e;
 
 typedef enum {
-    GPS_UPDATE_RATE_5HZ = 0xC8,
-    GPS_UPDATE_RATE_10HZ = 0x64,
-    GPS_UPDATE_RATE_19HZ = 0x35
+    GPS_UPDATE_RATE_5HZ = 0,
+    GPS_UPDATE_RATE_10HZ,
+    GPS_UPDATE_RATE_19HZ
 } gpsUpdateRate_e;
 
 #define GPS_BAUDRATE_MAX GPS_BAUDRATE_9600
@@ -100,7 +100,7 @@ typedef struct gpsConfig_s {
     uint8_t gps_set_home_point_once;
     uint8_t gps_use_3d_speed;
     uint8_t sbas_integrity;
-    gpsUpdateRate_e gpsUpdateRate;
+    gpsUpdateRate_e gps_update_rate;
 } gpsConfig_t;
 
 PG_DECLARE(gpsConfig_t, gpsConfig);

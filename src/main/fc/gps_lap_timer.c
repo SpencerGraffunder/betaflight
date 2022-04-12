@@ -30,6 +30,7 @@
 #include "pg/pg_ids.h"
 
 #include "fc/gps_lap_timer.h"
+#include "fc/rc_modes.h"
 
 PG_REGISTER_WITH_RESET_TEMPLATE(gpsLapTimerConfig_t, gpsLapTimerConfig, PG_GPS_LAP_TIMER, 1);
 
@@ -37,7 +38,7 @@ PG_RESET_TEMPLATE(gpsLapTimerConfig_t, gpsLapTimerConfig,
     .gateLat = 0,
     .gateLon = 0,
     .minimumLapTimeSeconds = 10,
-    .gateToleranceCm = 500,
+    .gateTolerance = 9,
 );
 
 // if 1000 readings of 32-bit values are used, the total (for use in calculating the averate) would need 42 bits max.
@@ -47,7 +48,6 @@ static bool settingGate = false;
 static uint32_t minDistance = UINT32_MAX;
 static uint32_t minDistanceTime = 0L;
 static uint32_t timeOfLastLap = 0L;
-static bool timerRunning = false;
 static bool wasInCircle = false;
 
 gpsLapTimerData_t gpsLapTimerData;
@@ -60,11 +60,10 @@ void gpsLapTimerInit(void)
     gpsLapTimerData.numberOfSetReadings = 0;
     gpsLapTimerData.bestLapTime = 0;
     gpsLapTimerData.best3Consec = 0;
-    gpsLapTimerData.distToPoint = 0;
     gpsLapTimerData.previousLaps[0] = 0;
     gpsLapTimerData.previousLaps[1] = 0;
     gpsLapTimerData.previousLaps[2] = 0;
-    timerRunning = false;
+    gpsLapTimerData.timerRunning = false;
 }
 
 void gpsLapTimerStartSetGate(void)
@@ -82,58 +81,52 @@ void gpsLapTimerProcessSettingGate(void)
         gateSetLonReadings += gpsSol.llh.lon;
         gpsLapTimerData.numberOfSetReadings++;
     }
-    int32_t newLat = gateSetLatReadings / gpsLapTimerData.numberOfSetReadings;
-    int32_t newLon = gateSetLonReadings / gpsLapTimerData.numberOfSetReadings;
-    int32_t bearing;
-    GPS_distance_cm_bearing(&gpsSol.llh.lat, &gpsSol.llh.lon, &newLat, &newLon, &gpsLapTimerData.distToPoint, &bearing);
+    gpsLapTimerData.gateLocation.lat = gateSetLatReadings / gpsLapTimerData.numberOfSetReadings;
+    gpsLapTimerData.gateLocation.lon = gateSetLonReadings / gpsLapTimerData.numberOfSetReadings;
 }
 
 void gpsLapTimerEndSetGate(void)
 {
     settingGate = false;
-
-    int32_t newLat = gateSetLatReadings / gpsLapTimerData.numberOfSetReadings;
-    int32_t newLon = gateSetLonReadings / gpsLapTimerData.numberOfSetReadings;
-
-    gpsLapTimerConfigMutable()->gateLat = newLat;
-    gpsLapTimerConfigMutable()->gateLon = newLon;
-    gpsLapTimerData.gateLocation.lat = gpsLapTimerConfig()->gateLat;
-    gpsLapTimerData.gateLocation.lon = gpsLapTimerConfig()->gateLon;
+    gpsLapTimerConfigMutable()->gateLat = gpsLapTimerData.gateLocation.lat;
+    gpsLapTimerConfigMutable()->gateLon = gpsLapTimerData.gateLocation.lon;
 }
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-void gpsLapTimerUpdate(void)
+void lapTimerNewGpsData(void)
 {
     uint32_t currentTime = millis();
 
-    if (timerRunning) {
+    GPS_distance_cm_bearing(&gpsSol.llh.lat, &gpsSol.llh.lon, &gpsLapTimerData.gateLocation.lat, &gpsLapTimerData.gateLocation.lon, &gpsLapTimerData.distToPoint, &gpsLapTimerData.dirToPoint);
+
+    if (IS_RC_MODE_ACTIVE(BOXLAPTIMERRESET)) {
+        gpsLapTimerInit();
+    }
+
+    if (gpsLapTimerData.timerRunning) {
         gpsLapTimerData.currentLapTime = currentTime - timeOfLastLap;
     } else {
         gpsLapTimerData.currentLapTime = 0;
     }
 
     // Current lap time is at least the min lap timer or timer not running
-    if (gpsLapTimerData.currentLapTime > (gpsLapTimerConfig()->minimumLapTimeSeconds * 1000) || !timerRunning) {
+    if (gpsLapTimerData.currentLapTime > (gpsLapTimerConfig()->minimumLapTimeSeconds * 1000) || !gpsLapTimerData.timerRunning) {
 
         // Within radius of gate
-        uint32_t distance;
-        int32_t bearing;
-        GPS_distance_cm_bearing(&gpsSol.llh.lat, &gpsSol.llh.lon, &gpsLapTimerData.gateLocation.lat, &gpsLapTimerData.gateLocation.lon, &distance, &bearing);
-        if (distance < gpsLapTimerConfig()->gateToleranceCm) {
-            if (!wasInCircle) { // Just entered the circle
-                minDistance = UINT32_MAX;
+        if (gpsLapTimerData.distToPoint < (gpsLapTimerConfig()->gateTolerance * 100)) {
+            if (!wasInCircle) {
+                minDistance = UINT32_MAX; // reset for next time entering gate
             }
-            if (distance < minDistance) {
-                minDistance = distance;
+            if (gpsLapTimerData.distToPoint < minDistance) {
+                minDistance = gpsLapTimerData.distToPoint;
                 minDistanceTime = currentTime;
             }
             wasInCircle = true;
         } else {
-            wasInCircle = false;
             if (wasInCircle) { // Just left the circle
-                if (timerRunning) { // Not the first time through the gate
+                if (gpsLapTimerData.timerRunning) { // Not the first time through the gate
                     uint32_t lapTime = minDistanceTime - timeOfLastLap;
                     // Update best 3 consecutive
                     gpsLapTimerData.previousLaps[2] = gpsLapTimerData.previousLaps[1];
@@ -150,8 +143,9 @@ void gpsLapTimerUpdate(void)
                     }
                 }
                 timeOfLastLap = minDistanceTime;
-                timerRunning = true;
+                gpsLapTimerData.timerRunning = true;
             }
+            wasInCircle = false;
         }
     }
 

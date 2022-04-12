@@ -206,7 +206,7 @@ static const char * const lookupTableGPSSBASMode[] = {
 };
 
 static const char * const lookupTableGPSUpdateRate[] = {
-    "19HZ", "10HZ", "5HZ"
+    "5HZ", "10HZ", "19HZ"
 };
 
 static const char * const lookupTableGPSUBLOXMode[] = {
@@ -1022,7 +1022,7 @@ const clivalue_t valueTable[] = {
     { "gps_ublox_mode",             VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_GPS_UBLOX_MODE }, PG_GPS_CONFIG, offsetof(gpsConfig_t, gps_ublox_mode) },
     { "gps_set_home_point_once",    VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_GPS_CONFIG, offsetof(gpsConfig_t, gps_set_home_point_once) },
     { "gps_use_3d_speed",           VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_OFF_ON }, PG_GPS_CONFIG, offsetof(gpsConfig_t, gps_use_3d_speed) },
-    { "gps_update_rate",            VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_GPS_UPDATE_RATE }, PG_GPS_CONFIG, offsetof(gpsConfig_t, gpsUpdateRate) },
+    { "gps_update_rate",            VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_GPS_UPDATE_RATE }, PG_GPS_CONFIG, offsetof(gpsConfig_t, gps_update_rate) },
 
 #ifdef USE_GPS_RESCUE
     // PG_GPS_RESCUE
@@ -1059,7 +1059,7 @@ const clivalue_t valueTable[] = {
     { "gps_lap_timer_gate_lat",       VAR_INT32  | MASTER_VALUE, .config.minmax = { -1800000000, 1800000000 }, PG_GPS_LAP_TIMER, offsetof(gpsLapTimerConfig_t, gateLat) },
     { "gps_lap_timer_gate_lon",       VAR_INT32  | MASTER_VALUE, .config.minmax = { -1800000000, 1800000000 }, PG_GPS_LAP_TIMER, offsetof(gpsLapTimerConfig_t, gateLon) },
     { "gps_lap_timer_min_lap_time",   VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 0, 3000 },         PG_GPS_LAP_TIMER, offsetof(gpsLapTimerConfig_t, minimumLapTimeSeconds) },
-    { "gps_lap_timer_gate_tolerance", VAR_UINT32 | MASTER_VALUE, .config.minmaxUnsigned = { 0, 3000 },         PG_GPS_LAP_TIMER, offsetof(gpsLapTimerConfig_t, gateToleranceCm) },
+    { "gps_lap_timer_gate_tolerance", VAR_UINT8  | MASTER_VALUE, .config.minmaxUnsigned = { 1, 100 },          PG_GPS_LAP_TIMER, offsetof(gpsLapTimerConfig_t, gateTolerance) },
 #endif
 #endif
 

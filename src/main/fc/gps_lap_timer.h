@@ -29,13 +29,15 @@ typedef struct gpsLapTimerData_s {
     uint32_t bestLapTime;
     uint32_t best3Consec;
     uint32_t distToPoint;
+    int32_t dirToPoint;
+    bool timerRunning;
 } gpsLapTimerData_t;
 
 typedef struct gpsLapTimerConfig_s {
     int32_t gateLat;
     int32_t gateLon;
     uint16_t minimumLapTimeSeconds;
-    uint32_t gateToleranceCm;
+    uint8_t gateTolerance;
 } gpsLapTimerConfig_t;
 
 PG_DECLARE(gpsLapTimerConfig_t, gpsLapTimerConfig);
@@ -43,6 +45,6 @@ PG_DECLARE(gpsLapTimerConfig_t, gpsLapTimerConfig);
 extern gpsLapTimerData_t gpsLapTimerData;
 
 void gpsLapTimerInit(void);
-void gpsLapTimerUpdate(void);
+void lapTimerNewGpsData(void);
 void gpsLapTimerStartSetGate(void);
 void gpsLapTimerEndSetGate(void);
