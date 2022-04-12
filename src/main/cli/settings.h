@@ -222,6 +222,7 @@ typedef union {
     cliStringLengthConfig_t string;           // used for MODE_STRING
     uint8_t bitpos;                           // used for MODE_BITSET
     uint32_t u32Max;                          // used for MODE_DIRECT with VAR_UINT32
+    int32_t d32Max;                           // used for MODE_DIRECT with VAR_INT32
 } cliValueConfig_t;
 
 typedef struct clivalue_s {

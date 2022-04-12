@@ -547,6 +547,11 @@ static void printValuePointer(const char *cmdName, const clivalue_t *var, const 
                 // uin32_t array
                 cliPrintf("%u", ((uint32_t *)valuePointer)[i]);
                 break;
+
+            case VAR_INT32:
+                // uin32_t array
+                cliPrintf("%d", ((int32_t *)valuePointer)[i]);
+                break;
             }
 
             if (i < var->config.array.length - 1) {
@@ -575,6 +580,10 @@ static void printValuePointer(const char *cmdName, const clivalue_t *var, const 
             break;
         case VAR_UINT32:
             value = *(uint32_t *)valuePointer;
+
+            break;
+        case VAR_INT32:
+            value = *(int32_t *)valuePointer;
 
             break;
         }
@@ -659,6 +668,9 @@ static bool valuePtrEqualsDefault(const clivalue_t *var, const void *ptr, const 
             break;
         case VAR_UINT32:
             result = result && (((uint32_t *)ptr)[i] & mask) == (((uint32_t *)ptrDefault)[i] & mask);
+            break;
+        case VAR_INT32:
+            result = result && (((int32_t *)ptr)[i] & mask) == (((int32_t *)ptrDefault)[i] & mask);
             break;
         }
     }
@@ -845,6 +857,10 @@ static void cliPrintVarRange(const clivalue_t *var)
             cliPrintLinef("Allowed range: 0 - %u", var->config.u32Max);
 
             break;
+        case VAR_INT32:
+            cliPrintLinef("Allowed range: %d - %d", var->config.minmax.min, var->config.minmax.max);
+
+            break;
         case VAR_UINT8:
         case VAR_UINT16:
             cliPrintLinef("Allowed range: %d - %d", var->config.minmaxUnsigned.min, var->config.minmaxUnsigned.max);
@@ -925,6 +941,16 @@ static void cliSetVar(const clivalue_t *var, const uint32_t value)
             }
             *(uint32_t *)ptr = workValue;
             break;
+
+        case VAR_INT32:
+            mask = 1 << var->config.bitpos;
+            if (value) {
+                workValue = *(int32_t *)ptr | mask;
+            } else {
+                workValue = *(int32_t *)ptr & ~mask;
+            }
+            *(int32_t *)ptr = workValue;
+            break;
         }
     } else {
         switch (var->type & VALUE_TYPE_MASK) {
@@ -946,6 +972,10 @@ static void cliSetVar(const clivalue_t *var, const uint32_t value)
 
         case VAR_UINT32:
             *(uint32_t *)ptr = value;
+            break;
+
+        case VAR_INT32:
+            *(int32_t *)ptr = value;
             break;
         }
     }
