@@ -18,32 +18,6 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "platform.h"
+#pragma once
 
-#ifdef USE_GPS
-
-#include "io/gps.h"
-
-#include "pg/pg.h"
-#include "pg/pg_ids.h"
-
-#include "gps.h"
-
-PG_REGISTER_WITH_RESET_TEMPLATE(gpsConfig_t, gpsConfig, PG_GPS_CONFIG, 2);
-
-PG_RESET_TEMPLATE(gpsConfig_t, gpsConfig,
-    .provider = GPS_UBLOX,
-    .sbasMode = SBAS_NONE,
-    .autoConfig = GPS_AUTOCONFIG_ON,
-    .autoBaud = GPS_AUTOBAUD_OFF,
-    .gps_ublox_acquire_model = UBLOX_MODEL_STATIONARY,
-    .gps_ublox_flight_model = UBLOX_MODEL_AIRBORNE_4G,
-    .gps_update_rate_hz = 10,
-    .gps_ublox_use_galileo = false,
-    .gps_ublox_full_power = true,
-    .gps_set_home_point_once = false,
-    .gps_use_3d_speed = false,
-    .sbas_integrity = false,
-);
-
-#endif // USE_GPS
+extern CMS_Menu cms_menuGpsLapTimer;
