@@ -61,6 +61,7 @@
 #include "drivers/time.h"
 
 #include "fc/core.h"
+#include "fc/gps_lap_timer.h"
 #include "fc/rc_controls.h"
 #include "fc/rc_modes.h"
 #include "fc/runtime_config.h"
@@ -188,6 +189,8 @@ const osd_stats_e osdStatsDisplayOrder[OSD_STAT_COUNT] = {
     OSD_STAT_TOTAL_FLIGHTS,
     OSD_STAT_TOTAL_TIME,
     OSD_STAT_TOTAL_DIST,
+    OSD_STAT_BEST_3_CONSEC_LAPS,
+    OSD_STAT_BEST_LAP,
 };
 
 // Group elements in a number of groups to reduce task scheduling overhead
@@ -844,6 +847,39 @@ static bool osdDisplayStat(int statistic, uint8_t displayRow)
         osdDisplayStatisticLabel(displayRow, "MIN RSSI DBM", buff);
         return true;
 #endif
+
+#ifdef USE_GPS_LAP_TIMER
+    case OSD_STAT_BEST_3_CONSEC_LAPS: {
+        uint32_t lapTimeSeconds;
+        uint32_t lapTimeDecimals;
+        if (gpsLapTimerData.best3Consec != 0) {
+            lapTimeSeconds = gpsLapTimerData.best3Consec / 1000;
+            lapTimeDecimals = (gpsLapTimerData.best3Consec % 1000) / 10;
+            tfp_sprintf(buff, "%3u.%02u", lapTimeSeconds, lapTimeDecimals);
+        } else {
+            tfp_sprintf(buff, "  -.--");
+        }
+        
+        osdDisplayStatisticLabel(displayRow, "BEST 3 CON", buff);
+        return true;
+    }
+
+    case OSD_STAT_BEST_LAP: {
+        uint32_t lapTimeSeconds;
+        uint32_t lapTimeDecimals;
+        lapTimeSeconds = gpsLapTimerData.bestLapTime / 1000;
+        lapTimeDecimals = (gpsLapTimerData.bestLapTime % 1000) / 10;
+        if (gpsLapTimerData.bestLapTime != 0) {
+            lapTimeSeconds = gpsLapTimerData.bestLapTime / 1000;
+            lapTimeDecimals = (gpsLapTimerData.bestLapTime % 1000) / 10;
+            tfp_sprintf(buff, "%3u.%02u", lapTimeSeconds, lapTimeDecimals);
+        } else {
+            tfp_sprintf(buff, "  -.--");
+        }
+        osdDisplayStatisticLabel(displayRow, "BEST LAP", buff);
+        return true;
+    }
+#endif // GPS_LAP_TIMER
 
 #ifdef USE_PERSISTENT_STATS
     case OSD_STAT_TOTAL_FLIGHTS:

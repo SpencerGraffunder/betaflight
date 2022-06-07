@@ -383,7 +383,7 @@ extern uint8_t _dmaram_end__;
 #define USE_CANVAS
 #define USE_FRSKYOSD
 #define USE_GPS
-#define USE_GPS_NMEA
+//#define USE_GPS_NMEA
 #define USE_GPS_UBLOX
 #define USE_GPS_RESCUE
 #define USE_GYRO_DLPF_EXPERIMENTAL
@@ -421,6 +421,8 @@ extern uint8_t _dmaram_end__;
 #define USE_SIMPLIFIED_TUNING
 #define USE_RX_LINK_UPLINK_POWER
 #define USE_CRSF_V3
+#define USE_GPS_LAP_TIMER
+#define USE_CMS_GPS_LAP_TIMER_MENU
 #endif
 
 #if (TARGET_FLASH_SIZE > 512)

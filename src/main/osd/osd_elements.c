@@ -134,6 +134,7 @@
 
 #include "fc/controlrate_profile.h"
 #include "fc/core.h"
+#include "fc/gps_lap_timer.h"
 #include "fc/rc_adjustments.h"
 #include "fc/rc_controls.h"
 #include "fc/runtime_config.h"
@@ -1023,8 +1024,18 @@ static void osdElementGpsHomeDirection(osdElementParms_t *element)
 {
     if (STATE(GPS_FIX) && STATE(GPS_FIX_HOME)) {
         if (GPS_distanceToHome > 0) {
+#ifdef USE_GPS_LAP_TIMER
+            // Change the "home" point to the start/finish location if the lap timer is running
+            if (gpsLapTimerData.timerRunning) {
+                const int h = gpsLapTimerData.dirToPoint/100 - DECIDEGREES_TO_DEGREES(attitude.values.yaw);
+                element->buff[0] = osdGetDirectionSymbolFromHeading(h);
+            } else {
+#endif
             const int h = GPS_directionToHome - DECIDEGREES_TO_DEGREES(attitude.values.yaw);
             element->buff[0] = osdGetDirectionSymbolFromHeading(h);
+#ifdef USE_GPS_LAP_TIMER
+            }
+#endif
         } else {
             element->buff[0] = SYM_OVER_HOME;
         }
@@ -1040,7 +1051,16 @@ static void osdElementGpsHomeDirection(osdElementParms_t *element)
 static void osdElementGpsHomeDistance(osdElementParms_t *element)
 {
     if (STATE(GPS_FIX) && STATE(GPS_FIX_HOME)) {
-        osdFormatDistanceString(element->buff, GPS_distanceToHome, SYM_HOMEFLAG);
+#ifdef USE_GPS_LAP_TIMER
+        // Change the "home" point to the start/finish location if the lap timer is running
+        if (gpsLapTimerData.timerRunning) {
+            osdFormatDistanceString(element->buff, gpsLapTimerData.distToPoint/100, SYM_HOMEFLAG);
+        } else {
+#endif
+            osdFormatDistanceString(element->buff, GPS_distanceToHome, SYM_HOMEFLAG);
+#ifdef USE_GPS_LAP_TIMER
+        }
+#endif
     } else {
         element->buff[0] = SYM_HOMEFLAG;
         // We use this symbol when we don't have a FIX
@@ -1099,6 +1119,29 @@ static void osdElementEfficiency(osdElementParms_t *element)
     }
 }
 #endif // USE_GPS
+
+#ifdef USE_GPS_LAP_TIMER
+static void osdElementGpsLapTimeCurrent(osdElementParms_t *element)
+{
+    uint32_t lapTimeSeconds = gpsLapTimerData.currentLapTime / 1000;
+    uint32_t lapTimeDecimals = (gpsLapTimerData.currentLapTime % 1000) / 10;
+    tfp_sprintf(element->buff, "%c%3u.%02u", SYM_TOTAL_DISTANCE, lapTimeSeconds, lapTimeDecimals);
+}
+
+static void osdElementGpsLapTimePrevious(osdElementParms_t *element)
+{
+    uint32_t lapTimeSeconds = gpsLapTimerData.previousLaps[0] / 1000;
+    uint32_t lapTimeDecimals = (gpsLapTimerData.previousLaps[0] % 1000) / 10;
+    tfp_sprintf(element->buff, "%c%3u.%02u", SYM_CHECKERED_FLAG, lapTimeSeconds, lapTimeDecimals);
+}
+
+static void osdElementGpsLapTimeBest3(osdElementParms_t *element)
+{
+    uint32_t lapTimeSeconds = gpsLapTimerData.best3Consec / 1000;
+    uint32_t lapTimeDecimals = (gpsLapTimerData.best3Consec % 1000) / 10;
+    tfp_sprintf(element->buff, "%c%3u.%02u", SYM_LAST_3, lapTimeSeconds, lapTimeDecimals);
+}
+#endif // GPS_LAP_TIMER
 
 static void osdBackgroundHorizonSidebars(osdElementParms_t *element)
 {
@@ -1675,6 +1718,11 @@ const osdElementDrawFn osdElementDrawFunction[OSD_ITEM_COUNT] = {
 #ifdef USE_PERSISTENT_STATS
     [OSD_TOTAL_FLIGHTS]           = osdElementTotalFlights,
 #endif
+#ifdef USE_GPS_LAP_TIMER
+    [OSD_GPS_LAP_TIME_CURRENT]    = osdElementGpsLapTimeCurrent,
+    [OSD_GPS_LAP_TIME_PREVIOUS]   = osdElementGpsLapTimePrevious,
+    [OSD_GPS_LAP_TIME_BEST3]      = osdElementGpsLapTimeBest3,
+#endif // GPS_LAP_TIMER
 };
 
 // Define the mapping between the OSD element id and the function to draw its background (static part)
@@ -1745,6 +1793,13 @@ void osdAddActiveElements(void)
 #ifdef USE_PERSISTENT_STATS
     osdAddActiveElement(OSD_TOTAL_FLIGHTS);
 #endif
+#ifdef USE_GPS_LAP_TIMER
+    if (sensors(SENSOR_GPS)) {
+        osdAddActiveElement(OSD_GPS_LAP_TIME_CURRENT);
+        osdAddActiveElement(OSD_GPS_LAP_TIME_PREVIOUS);
+        osdAddActiveElement(OSD_GPS_LAP_TIME_BEST3);
+    }
+#endif // GPS_LAP_TIMER
 }
 
 static void osdDrawSingleElement(displayPort_t *osdDisplayPort, uint8_t item)

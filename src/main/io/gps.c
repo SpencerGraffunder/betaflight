@@ -49,6 +49,7 @@
 #include "io/serial.h"
 
 #include "config/config.h"
+#include "fc/gps_lap_timer.h"
 #include "fc/runtime_config.h"
 
 #include "flight/imu.h"
@@ -284,6 +285,7 @@ PG_RESET_TEMPLATE(gpsConfig_t, gpsConfig,
     .gps_ublox_mode = UBLOX_AIRBORNE,
     .gps_set_home_point_once = false,
     .gps_use_3d_speed = false,
+    .gps_update_rate = GPS_UPDATE_RATE_5HZ,
     .sbas_integrity = false
 );
 
@@ -681,7 +683,17 @@ void gpsInitUblox(void)
                         }
                         break;
                     case 12:
-                        ubloxSetNavRate(0xC8, 1, 1); // set rate to 5Hz (measurement period: 200ms, navigation rate: 1 cycle)
+                        switch (gpsConfig()->gps_update_rate) {
+                            case GPS_UPDATE_RATE_5HZ:
+                                ubloxSetNavRate(0xC8, 1, 1);
+                                break;
+                            case GPS_UPDATE_RATE_10HZ:
+                                ubloxSetNavRate(0x64, 1, 1);
+                                break;
+                            case GPS_UPDATE_RATE_19HZ:
+                                ubloxSetNavRate(0x35, 1, 1);
+                                break;
+                        }
                         break;
                     case 13:
                         ubloxSetSbas();
@@ -1870,6 +1882,9 @@ void onGpsNewData(void)
 #ifdef USE_GPS_RESCUE
     rescueNewGpsData();
 #endif
+#ifdef USE_GPS_LAP_TIMER
+    lapTimerNewGpsData();
+#endif // GPS_LAP_TIMER
 }
 
 void gpsSetFixState(bool state)
