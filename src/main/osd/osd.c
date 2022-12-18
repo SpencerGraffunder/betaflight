@@ -978,7 +978,7 @@ static bool osdDisplayStat(int statistic, uint8_t displayRow)
         osdDisplayStatisticLabel(displayRow, "BEST LAP", buff);
         return true;
     }
-#endif // GPS_LAP_TIMER
+#endif // USE_GPS_LAP_TIMER
 
 #ifdef USE_PERSISTENT_STATS
     case OSD_STAT_TOTAL_FLIGHTS:

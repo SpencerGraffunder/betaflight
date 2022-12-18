@@ -1976,7 +1976,7 @@ void onGpsNewData(void)
 #endif
 #ifdef USE_GPS_LAP_TIMER
     lapTimerNewGpsData();
-#endif // GPS_LAP_TIMER
+#endif // USE_GPS_LAP_TIMER
 }
 
 void gpsSetFixState(bool state)
